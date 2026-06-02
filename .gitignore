@@ -1,0 +1,48 @@
+# ---- Gradle ----
+.gradle/
+build/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/**/build/
+
+# ---- Android Studio / IntelliJ ----
+.idea/
+*.iml
+.kotlin/
+captures/
+.cxx/
+
+# ---- Local config & secrets (NEVER commit) ----
+local.properties
+keystore.properties
+secrets.properties
+*.jks
+*.keystore
+*.p12
+*.pem
+release.keystore
+google-services.json
+# Base64-encoded keystore artifacts that CI decodes from secrets
+*.keystore.b64
+*.jks.b64
+
+# ---- Build outputs (download from CI artifacts instead) ----
+*.apk
+*.aab
+*.ap_
+*.aar
+*.dex
+output.json
+mapping.txt
+
+# ---- Misc ----
+.DS_Store
+*.log
+local.log
+proguard/
+freeline.py
+freeline/
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
