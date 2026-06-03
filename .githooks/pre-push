@@ -1,0 +1,12 @@
+#!/bin/sh
+#
+# pre-push — quick compile check before code leaves your machine.
+# Auto-installed by the :installGitHooks Gradle task. Bypass: git push --no-verify
+#
+set -e
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+echo "▶ pre-push: ./gradlew compileReleaseKotlin"
+./gradlew compileReleaseKotlin --daemon

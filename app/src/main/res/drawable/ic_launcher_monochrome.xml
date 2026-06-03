@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Monochrome "m" for Android 13+ themed icons. The launcher tints this layer,
+  so the colour here is only a placeholder; only the shape/alpha matters.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+
+    <group
+        android:scaleX="0.9"
+        android:scaleY="0.9"
+        android:pivotX="512"
+        android:pivotY="512"
+        android:translateY="-16">
+        <path
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="84"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M324,690 L324,396 M324,470 C324,408 372,372 432,372 C492,372 512,420 512,478 L512,690 M512,470 C512,408 560,372 620,372 C680,372 700,420 700,478 L700,690" />
+    </group>
+</vector>

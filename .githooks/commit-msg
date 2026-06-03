@@ -1,0 +1,39 @@
+#!/bin/sh
+#
+# commit-msg — enforce Conventional Commits on the subject line.
+# Auto-installed by the :installGitHooks Gradle task. Bypass: git commit --no-verify
+#
+# Format: <type>(optional-scope)!: <description>
+#   type   one of: feat fix refactor docs test chore perf ci build style revert
+#   scope  optional, lower-kebab e.g. (player), (core-data)
+#   !      optional breaking-change marker
+#
+set -e
+
+MSG_FILE="$1"
+SUBJECT="$(sed -n '1p' "$MSG_FILE")"
+
+# Let git's own generated messages through untouched.
+case "$SUBJECT" in
+  "Merge "*|"Revert "*|"fixup! "*|"squash! "*|"amend! "*) exit 0 ;;
+esac
+
+PATTERN='^(feat|fix|refactor|docs|test|chore|perf|ci|build|style|revert)(\([a-z0-9._-]+\))?!?: .+'
+
+if ! printf '%s' "$SUBJECT" | grep -qE "$PATTERN"; then
+  cat >&2 <<'EOF'
+✗ commit-msg: subject does not follow Conventional Commits.
+
+  Format:  <type>(optional-scope): <description>
+  Types:   feat fix refactor docs test chore perf ci build style revert
+
+  Examples:
+    feat: add HLS retry backoff
+    fix(player): release ExoPlayer when surface is destroyed
+    chore(deps): bump media3 to 1.10.1
+    refactor!: drop legacy splash theme
+
+  Bypass (discouraged): git commit --no-verify
+EOF
+  exit 1
+fi

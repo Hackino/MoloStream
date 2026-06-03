@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive-icon background: warm near-black diagonal gradient with a soft mango
+  glow behind the mark. Mirrors design/icon-previews/concept-14-lowercase-m.svg.
+  Gradients in VectorDrawable are supported from API 24 (= our minSdk).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+
+    <!-- warm dark base -->
+    <path android:pathData="M0,0 L1024,0 L1024,1024 L0,1024 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0" android:startY="0"
+                android:endX="1024" android:endY="1024">
+                <item android:offset="0" android:color="#FF1C140C" />
+                <item android:offset="0.55" android:color="#FF12100B" />
+                <item android:offset="1" android:color="#FF0B0906" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- mango glow halo -->
+    <path android:pathData="M0,0 L1024,0 L1024,1024 L0,1024 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="512" android:centerY="512"
+                android:gradientRadius="560">
+                <item android:offset="0" android:color="#47FFA12E" />
+                <item android:offset="0.65" android:color="#0DFFA12E" />
+                <item android:offset="1" android:color="#00FFA12E" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

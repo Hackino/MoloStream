@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Activity shell theme. Compose draws the real UI; this just sets a dark
+         window background and edge-to-edge bars. -->
+    <style name="Theme.MoloStream" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <!-- Cold-start splash (AndroidX core-splashscreen, backported to our minSdk).
+         The launcher activity uses this; installSplashScreen() hands off to
+         Theme.MoloStream once the first frame is ready. -->
+    <style name="Theme.MoloStream.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.MoloStream</item>
+    </style>
+</resources>

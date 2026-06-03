@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- All user-facing static strings live here in the shared design-system
+         module; features reference them via com.molostream.core.designsystem.R. -->
+
+    <!-- Brand / chrome -->
+    <string name="brand_molo">Molo</string>
+    <string name="brand_stream">Stream</string>
+    <string name="brand_avatar_initial">M</string>
+
+    <!-- Generic actions -->
+    <string name="action_play">Play</string>
+    <string name="action_more_info">More info</string>
+
+    <!-- Content descriptions (accessibility) -->
+    <string name="cd_search">Search</string>
+    <string name="cd_profile">Profile</string>
+    <string name="cd_close">Close</string>
+    <string name="cd_close_player">Close player</string>
+    <string name="cd_rewind_10">Rewind 10 seconds</string>
+    <string name="cd_forward_10">Forward 10 seconds</string>
+    <string name="cd_play">Play</string>
+    <string name="cd_pause">Pause</string>
+    <string name="cd_seek">Seek</string>
+    <string name="cd_toggle_premium">Toggle premium subscription</string>
+
+    <!-- Home -->
+    <string name="home_featured_today">Featured today</string>
+    <string name="home_premium_title">MoloStream Premium</string>
+    <string name="home_premium_on">Ad-free streaming is on.</string>
+    <string name="home_premium_off">Turn on to skip all ads.</string>
+    <string name="home_premium_active">Active</string>
+    <string name="home_rail_top_picks">Top Picks for You</string>
+    <string name="home_rail_top_picks_caption">Hand-curated, in portrait</string>
+    <string name="home_rail_movies">Movies</string>
+    <string name="home_rail_movies_caption">Feature-length, wide-format</string>
+    <string name="home_rail_continue">Continue Watching</string>
+    <string name="home_footer">You’re all caught up · MoloStream</string>
+
+    <!-- Live badge / label (LIVE streams) -->
+    <string name="media_live">LIVE</string>
+
+    <!-- Movie metadata format: "year · rating" -->
+    <string name="movie_year_rating">%1$d · %2$s</string>
+    <!-- Player subtitle / detail meta: "genre · runtime" -->
+    <string name="movie_genre_meta">%1$s · %2$s</string>
+
+    <!-- Player -->
+    <string name="player_hls">HLS</string>
+    <string name="player_ad">Ad</string>
+    <string name="player_ad_with_time">Ad · %1$s</string>
+
+    <!-- Detail sheet plan badges -->
+    <string name="plan_ad_free">Ad-free</string>
+    <string name="plan_with_ads">With ads</string>
+
+    <!-- Player: resume prompt (Netflix-style) -->
+    <string name="player_resume_title">Resume watching?</string>
+    <string name="player_resume_body">You left off at %1$s</string>
+    <string name="player_action_resume">Resume</string>
+    <string name="player_action_start_over">Start over</string>
+
+    <!-- Player: exit confirmation -->
+    <string name="player_exit_title">Stop watching?</string>
+    <string name="player_exit_title_live">Leave the live stream?</string>
+    <!-- Premium: progress is saved (Continue Watching is a Premium perk). -->
+    <string name="player_exit_body">Your place is saved — you can pick up where you left off.</string>
+    <!-- Free: no resume, so don't promise it. -->
+    <string name="player_exit_body_free">Go Premium to save your place and resume later.</string>
+    <string name="player_action_keep_watching">Keep watching</string>
+    <string name="player_action_close">Close player</string>
+
+    <!-- Subscribe / unsubscribe dialogs -->
+    <string name="sub_dialog_title">Go Premium</string>
+    <string name="sub_dialog_subtitle">Stream without interruptions.</string>
+    <string name="sub_benefit_adfree">Zero ads — before, during or after</string>
+    <string name="sub_benefit_quality">Full-quality adaptive HLS streaming</string>
+    <string name="sub_benefit_resume">Pick up exactly where you left off</string>
+    <string name="sub_dialog_confirm">Subscribe</string>
+    <string name="sub_dialog_cancel">Maybe later</string>
+    <string name="unsub_dialog_title">Cancel Premium?</string>
+    <string name="unsub_dialog_body">You’ll start seeing ads before and during videos again.</string>
+    <string name="unsub_dialog_confirm">Cancel Premium</string>
+    <string name="unsub_dialog_dismiss">Keep Premium</string>
+
+    <!-- Close-app confirmation (Home back press) -->
+    <string name="exit_app_title">Leave MoloStream?</string>
+    <string name="exit_app_body">You can always pick up right where you left off.</string>
+    <string name="exit_app_confirm">Close app</string>
+    <string name="exit_app_dismiss">Stay</string>
+</resources>
