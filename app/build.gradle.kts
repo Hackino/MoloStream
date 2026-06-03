@@ -28,7 +28,7 @@ android {
         }
 
     val hasLocalKeystore = keystoreProps.isNotEmpty()
-    val hasCiKeystore = System.getenv("KEYSTORE_FILE") != null
+    val hasCiKeystore = !System.getenv("KEYSTORE_FILE").isNullOrBlank()
     val hasReleaseKeystore = hasLocalKeystore || hasCiKeystore
 
     signingConfigs {
@@ -60,7 +60,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            signingConfig = signingConfigs.getByName("release")
+            if (hasReleaseKeystore) signingConfig = signingConfigs.getByName("release")
         }
     }
 }
