@@ -54,6 +54,9 @@ jobs:
       # Auto-bumped version: monotonic per workflow run, no commit-back needed.
       VERSION_CODE: ${{ github.run_number }}
       VERSION_NAME: 1.0.${{ github.run_number }}
+      # Mapped here so the if: condition below can reference env context
+      # (secrets context is not available in if: expressions).
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
     steps:
       - uses: actions/checkout@v4
 
@@ -62,9 +65,7 @@ jobs:
 
       - name: Decode signing keystore
         id: keystore
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        if: ${{ env.KEYSTORE_BASE64 != '' }}
         run: |
           echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
           echo "path=$RUNNER_TEMP/release.keystore" >> "$GITHUB_OUTPUT"
