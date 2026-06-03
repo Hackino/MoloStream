@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Warm near-black splash window background (design token c-bg-deep). -->
+    <color name="splash_background">#0B0906</color>
+</resources>

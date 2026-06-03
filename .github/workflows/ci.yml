@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: CI only needs to read the repo.
+permissions:
+  contents: read
+
+jobs:
+  validate-wrapper:
+    name: Validate Gradle wrapper
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Verifies gradle-wrapper.jar matches a known-good checksum (supply-chain guard).
+      - uses: gradle/actions/wrapper-validation@v4
+
+  lint:
+    name: Android Lint
+    runs-on: ubuntu-latest
+    needs: validate-wrapper
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Android build environment
+        uses: ./.github/actions/setup-android
+
+      - name: Run lint
+        run: ./gradlew lint --no-daemon --stacktrace
+
+      - name: Upload lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-reports
+          path: "**/build/reports/lint-results-*.*"
+          if-no-files-found: ignore
+          retention-days: 14
+
+  build-release:
+    name: Build signed release APK
+    runs-on: ubuntu-latest
+    needs: validate-wrapper
+    env:
+      # Auto-bumped version: monotonic per workflow run, no commit-back needed.
+      VERSION_CODE: ${{ github.run_number }}
+      VERSION_NAME: 1.0.${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Android build environment
+        uses: ./.github/actions/setup-android
+
+      - name: Decode signing keystore
+        id: keystore
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
+          echo "path=$RUNNER_TEMP/release.keystore" >> "$GITHUB_OUTPUT"
+
+      - name: Assemble release
+        env:
+          # Empty when the secret is unset -> Gradle falls back to debug signing.
+          KEYSTORE_FILE: ${{ steps.keystore.outputs.path }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk-${{ env.VERSION_NAME }}
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 30

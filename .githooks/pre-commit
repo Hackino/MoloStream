@@ -1,0 +1,64 @@
+#!/bin/sh
+#
+# pre-commit — fast, text-based guards first, then compile/static-analysis.
+# Auto-installed by the :installGitHooks Gradle task. Bypass: git commit --no-verify
+#
+# Order (cheapest → most expensive):
+#   1. Secret scan        (instant, text)
+#   2. Large-file/binary  (instant, text)
+#   3. Kotlin: ktlint + detekt + compile   (when *.kt / *.kts staged)
+#   4. Android resource lint                (when res/ assets staged)
+#
+set -e
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+STAGED="$(git diff --cached --name-only --diff-filter=ACMR)"
+[ -z "$STAGED" ] && exit 0
+
+# --- 1. Secret scan --------------------------------------------------------
+# Scan the staged diff (added lines only) for credential-shaped strings.
+# Tune patterns as needed; bypass a false positive with `git commit --no-verify`.
+SECRET_PATTERNS='(AIza[0-9A-Za-z_-]{35})|(ghp_[0-9A-Za-z]{36})|(sk-[A-Za-z0-9]{20,})|(-----BEGIN[ A-Z]*PRIVATE KEY-----)|(xox[baprs]-[0-9A-Za-z-]{10,})|((aws_)?secret_access_key[[:space:]]*[:=])|((api[_-]?key|api[_-]?secret|client[_-]?secret|auth[_-]?token|access[_-]?token|password|passwd)[[:space:]]*[:=][[:space:]]*["'\''][^"'\'' ]{6,})'
+
+ADDED="$(git diff --cached -U0 --diff-filter=ACMR | grep -E '^\+' | grep -vE '^\+\+\+' || true)"
+if printf '%s\n' "$ADDED" | grep -inE "$SECRET_PATTERNS" >/dev/null 2>&1; then
+  echo "✗ pre-commit: possible secret detected in staged changes:"
+  printf '%s\n' "$ADDED" | grep -inE "$SECRET_PATTERNS" | sed 's/^/    /'
+  echo "  Move it to local.properties / BuildConfig / EncryptedSharedPreferences."
+  echo "  If this is a false positive: git commit --no-verify"
+  exit 1
+fi
+
+# --- 2. Large-file / binary guard -----------------------------------------
+MAX_KB=4048
+BLOCKED_EXT='\.(apk|aab|aar|jar|dex|class|so|keystore|jks|p12|zip|7z|mp4|mov|psd|sketch|fig)$'
+for f in $STAGED; do
+  [ -f "$f" ] || continue
+  case "$f" in
+    gradle/wrapper/*|*/gradle/wrapper/*) continue ;;  # gradle-wrapper.jar is expected
+  esac
+  if printf '%s\n' "$f" | grep -qiE "$BLOCKED_EXT"; then
+    echo "✗ pre-commit: binary/artifact staged: $f"
+    echo "  Commit binaries deliberately only with: git commit --no-verify"
+    exit 1
+  fi
+  kb=$(( ( $(wc -c < "$f") + 1023 ) / 1024 ))
+  if [ "$kb" -gt "$MAX_KB" ]; then
+    echo "✗ pre-commit: file too large: $f (${kb}KB > ${MAX_KB}KB)"
+    exit 1
+  fi
+done
+
+# --- 3. Kotlin: lint + static analysis + compile --------------------------
+if printf '%s\n' "$STAGED" | grep -qE '\.(kt|kts)$'; then
+  echo "▶ pre-commit: ./gradlew ktlintCheck detekt compileReleaseKotlin"
+  ./gradlew ktlintCheck detekt compileReleaseKotlin --daemon
+fi
+
+# --- 4. Android resource lint (only when res/ assets change) ---------------
+if printf '%s\n' "$STAGED" | grep -qE '/res/.*\.(xml|png|webp|jpg|jpeg)$'; then
+  echo "▶ pre-commit: ./gradlew :app:lintDebug (resource changes detected)"
+  ./gradlew :app:lintDebug --daemon
+fi

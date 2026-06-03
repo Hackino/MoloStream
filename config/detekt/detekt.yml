@@ -1,0 +1,67 @@
+# Detekt configuration for MoloStream.
+# Layered on top of detekt's defaults (buildUponDefaultConfig = true in the
+# root build.gradle.kts), so only deltas from the defaults are listed here.
+# Run locally with: ./gradlew detekt
+
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+config:
+  validation: true
+  warningsAsErrors: false
+
+complexity:
+  LongMethod:
+    threshold: 60
+  LongParameterList:
+    functionThreshold: 8
+    constructorThreshold: 8
+  CyclomaticComplexMethod:
+    threshold: 18
+  TooManyFunctions:
+    active: false
+
+style:
+  # Compose & UI code legitimately uses literals for dp/sp/weights/colors.
+  MagicNumber:
+    active: false
+  MaxLineLength:
+    maxLineLength: 140
+  ReturnCount:
+    max: 4
+  UnusedPrivateMember:
+    active: true
+  FunctionOnlyReturningConstant:
+    active: false
+  ForbiddenComment:
+    active: true
+    comments:
+      - reason: 'Forbidden FIXME marker — resolve before committing.'
+        value: 'FIXME:'
+
+naming:
+  FunctionNaming:
+    # @Composable functions are PascalCase by convention.
+    ignoreAnnotated: ['Composable']
+  TopLevelPropertyNaming:
+    active: true
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: false
+  SwallowedException:
+    active: true
+  # CancellationException must always be rethrown in coroutine code.
+  RethrowCaughtException:
+    active: true
+
+comments:
+  active: false
+
+coroutines:
+  active: true
+  GlobalCoroutineUsage:
+    active: true
+  SuspendFunWithFlowReturnType:
+    active: true

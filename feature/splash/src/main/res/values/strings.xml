@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="splash_wordmark">MoloStream</string>
+    <string name="splash_tagline">watch streams anytime</string>
+    <string name="splash_logo_content_description">MoloStream</string>
+</resources>

@@ -16,6 +16,7 @@ captures/
 local.properties
 keystore.properties
 secrets.properties
+setup-wizard/
 *.jks
 *.keystore
 *.p12
