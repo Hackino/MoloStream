@@ -48,6 +48,7 @@ internal fun PlayerControls(
     subtitle: String,
     state: PlayerUiState,
     actions: PlayerActions,
+    subscribed: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val colors = MoloTheme.colors
@@ -73,6 +74,7 @@ internal fun PlayerControls(
         PlayerBottomBar(
             state = state,
             onSeekTo = actions.onSeekTo,
+            onSeekLocked = if (!subscribed && !state.isLive) actions.onSeekBlocked else null,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
@@ -130,13 +132,15 @@ private fun PlayerCenterTransport(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(28.dp),
     ) {
-        IconButton(onClick = { onSeekBy(-10_000L) }) {
-            Icon(
-                Icons.Filled.Replay10,
-                contentDescription = stringResource(DsR.string.cd_rewind_10),
-                tint = colors.text,
-                modifier = Modifier.size(34.dp),
-            )
+        if (!state.isLive) {
+            IconButton(onClick = { onSeekBy(-10_000L) }) {
+                Icon(
+                    Icons.Filled.Replay10,
+                    contentDescription = stringResource(DsR.string.cd_rewind_10),
+                    tint = colors.text,
+                    modifier = Modifier.size(34.dp),
+                )
+            }
         }
         Box(
             modifier = Modifier
@@ -163,19 +167,26 @@ private fun PlayerCenterTransport(
                 }
             }
         }
-        IconButton(onClick = { onSeekBy(10_000L) }) {
-            Icon(
-                Icons.Filled.Forward10,
-                contentDescription = stringResource(DsR.string.cd_forward_10),
-                tint = colors.text,
-                modifier = Modifier.size(34.dp),
-            )
+        if (!state.isLive) {
+            IconButton(onClick = { onSeekBy(10_000L) }) {
+                Icon(
+                    Icons.Filled.Forward10,
+                    contentDescription = stringResource(DsR.string.cd_forward_10),
+                    tint = colors.text,
+                    modifier = Modifier.size(34.dp),
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun PlayerBottomBar(state: PlayerUiState, onSeekTo: (Long) -> Unit, modifier: Modifier = Modifier) {
+private fun PlayerBottomBar(
+    state: PlayerUiState,
+    onSeekTo: (Long) -> Unit,
+    onSeekLocked: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
     val colors = MoloTheme.colors
     Column(
         modifier = modifier
@@ -184,11 +195,15 @@ private fun PlayerBottomBar(state: PlayerUiState, onSeekTo: (Long) -> Unit, modi
             .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         Scrubber(
-            positionMs = state.contentPositionMs,
-            bufferedMs = state.bufferedPositionMs,
-            durationMs = state.contentDurationMs,
+            state = ScrubberState(
+                positionMs = state.contentPositionMs,
+                bufferedMs = state.bufferedPositionMs,
+                durationMs = state.contentDurationMs,
+                isLive = state.isLive,
+                adBreakFractions = state.adBreakFractions,
+            ),
             onSeek = onSeekTo,
-            isLive = state.isLive,
+            onSeekLocked = onSeekLocked,
         )
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),

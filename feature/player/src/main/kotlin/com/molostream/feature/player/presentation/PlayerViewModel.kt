@@ -3,6 +3,7 @@ package com.molostream.feature.player.presentation
 import androidx.lifecycle.ViewModel
 import androidx.media3.common.AdViewProvider
 import androidx.media3.common.Player
+import com.molostream.feature.player.data.ExoPlayerController
 import com.molostream.feature.player.domain.PlayerController
 import kotlinx.coroutines.flow.StateFlow
 
@@ -22,6 +23,9 @@ class PlayerViewModel(private val controller: PlayerController) : ViewModel() {
     fun resumeFromSaved() = controller.resumeFromSaved()
     fun startFromBeginning() = controller.startFromBeginning()
     fun release() = controller.release()
+
+    fun pauseForBackground() = (controller as? ExoPlayerController)?.pauseForBackground()
+    fun resumeFromBackground() = (controller as? ExoPlayerController)?.resumeFromBackground()
 
     override fun onCleared() = controller.release()
 }

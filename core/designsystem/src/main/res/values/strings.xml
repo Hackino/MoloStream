@@ -84,6 +84,15 @@
     <string name="unsub_dialog_dismiss">Keep Premium</string>
 
     <!-- Close-app confirmation (Home back press) -->
+    <!-- Seek upsell dialog (shown when a free user tries to scrub the timeline) -->
+    <string name="seek_upsell_title">The Timeline is Yours</string>
+    <string name="seek_upsell_body">Free viewers watch the story unfold. Premium subscribers jump to any moment they want.</string>
+    <string name="seek_upsell_cta">Unlock Premium</string>
+    <string name="seek_upsell_dismiss">Keep watching in order</string>
+    <string name="seek_benefit_scrub">Seek anywhere, any time</string>
+    <string name="seek_benefit_adfree">Watch without interruptions</string>
+    <string name="seek_benefit_resume">Pick up exactly where you left off</string>
+
     <string name="exit_app_title">Leave MoloStream?</string>
     <string name="exit_app_body">You can always pick up right where you left off.</string>
     <string name="exit_app_confirm">Close app</string>

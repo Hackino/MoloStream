@@ -15,10 +15,6 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        setContent {
-            MoloStreamTheme {
-                MoloNavHost()
-            }
-        }
+        setContent { MoloStreamTheme { MoloNavHost() } }
     }
 }

@@ -3,8 +3,10 @@ package com.molostream.feature.player.data
 import android.content.Context
 import android.net.Uri
 import androidx.media3.common.AdViewProvider
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.ima.ImaAdsLoader
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -49,6 +51,7 @@ class ExoPlayerController(
         private set
 
     private var adsLoader: ImaAdsLoader? = null
+    private var wasPlayingBeforeBackground = false
     // Recreated in initialize() if a prior release() cancelled it.
     private var scope = newScope()
     private val saveScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -60,7 +63,12 @@ class ExoPlayerController(
     }
 
     override fun initialize(adViewProvider: AdViewProvider) {
-        if (player != null) return
+        if (player != null) {
+            // View was re-created (e.g. Activity recreated after background) — re-attach
+            // IMA to the new PlayerView so ad rendering doesn't break on return to foreground.
+            adsLoader?.setPlayer(player)
+            return
+        }
 
         // If this controller was previously released (scope cancelled) and is being
         // reused for the same movie, a fresh scope is needed for coroutines to work.
@@ -70,11 +78,14 @@ class ExoPlayerController(
         val mediaItemBuilder = MediaItem.Builder().setUri(args.hlsUrl)
 
         if (!subscribed && !args.isLive) {
-            val loader = ImaAdsLoader.Builder(appContext).build()
+            val loader = ImaAdsLoader.Builder(appContext)
+                // Don't fire ads that were "missed" due to an initial seek (e.g. resume-from-position).
+                .setPlayAdBeforeStartPosition(false)
+                .build()
             adsLoader = loader
             mediaSourceFactory.setLocalAdInsertionComponents({ loader }, adViewProvider)
             mediaItemBuilder.setAdsConfiguration(
-                MediaItem.AdsConfiguration.Builder(Uri.parse(args.adTagUrl)).build(),
+                MediaItem.AdsConfiguration.Builder(buildVmapUri()).build(),
             )
         }
 
@@ -143,6 +154,11 @@ class ExoPlayerController(
 
     private fun syncState(p: Player) {
         val contentDuration = p.contentDuration.takeIf { it > 0 } ?: 0L
+        // Preserve the last known ad duration: p.duration may return C.TIME_UNSET while
+        // IMA is still resolving, which would reset the countdown to 0 and look stuck.
+        val adDuration = if (p.isPlayingAd) {
+            p.duration.takeIf { it > 0 } ?: _uiState.value.adDurationMs
+        } else 0L
         _uiState.value = _uiState.value.copy(
             isPlaying = p.isPlaying,
             isBuffering = p.playbackState == Player.STATE_BUFFERING,
@@ -152,8 +168,32 @@ class ExoPlayerController(
             bufferedPositionMs = p.contentBufferedPosition.coerceAtLeast(0L),
             isPlayingAd = p.isPlayingAd,
             adPositionMs = if (p.isPlayingAd) p.currentPosition.coerceAtLeast(0L) else 0L,
-            adDurationMs = if (p.isPlayingAd) p.duration.takeIf { it > 0 } ?: 0L else 0L,
+            adDurationMs = adDuration,
+            adBreakFractions = readAdBreakFractions(p, contentDuration),
         )
+    }
+
+    /**
+     * Returns all ad break positions as fractions [0, 1] of content duration:
+     * pre-roll → 0f, mid-rolls → calculated position, post-roll → 1f.
+     */
+    private fun readAdBreakFractions(p: Player, contentDurationMs: Long): List<Float> {
+        val cached = _uiState.value.adBreakFractions
+        if (contentDurationMs <= 0 || p.currentTimeline.isEmpty) return cached
+        val periodIndex = p.currentPeriodIndex.takeIf { it >= 0 } ?: return cached
+        val period = Timeline.Period().also { p.currentTimeline.getPeriod(periodIndex, it) }
+        return if (period.adGroupCount == 0) cached else buildList {
+            for (i in 0 until period.adGroupCount) {
+                val timeUs = period.getAdGroupTimeUs(i)
+                add(
+                    when {
+                        timeUs == C.TIME_END_OF_SOURCE -> 1f
+                        timeUs <= 0L -> 0f
+                        else -> (timeUs / 1000f / contentDurationMs).coerceIn(0f, 1f)
+                    },
+                )
+            }
+        }
     }
 
     private fun maybePersist(p: Player) {
@@ -176,6 +216,19 @@ class ExoPlayerController(
         saveScope.launch { saveWatchProgress(progress) }
     }
 
+    fun pauseForBackground() {
+        val p = player ?: return
+        wasPlayingBeforeBackground = p.isPlaying || p.playWhenReady
+        p.pause()
+    }
+
+    fun resumeFromBackground() {
+        if (wasPlayingBeforeBackground) {
+            player?.play()
+            wasPlayingBeforeBackground = false
+        }
+    }
+
     override fun release() {
         val p = player ?: return
         persist(p.contentPosition, p.contentDuration)
@@ -189,6 +242,12 @@ class ExoPlayerController(
         progressJob = null
         scope.cancel()
     }
+
+    // The catalog's adTagUrl is a Google VMAP with short_onecue — pre-roll at start,
+    // one mid-roll cue at the exact midpoint of the content, post-roll at end.
+    // IMA resolves the cue against actual content duration at runtime so the dot
+    // on the scrubber lands at 50% regardless of video length.
+    private fun buildVmapUri(): Uri = Uri.parse(args.adTagUrl)
 
     private companion object {
         const val POLL_INTERVAL_MS = 500L
