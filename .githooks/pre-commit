@@ -7,7 +7,7 @@
 #   1. Secret scan        (instant, text)
 #   2. Large-file/binary  (instant, text)
 #   3. Kotlin: ktlint + detekt + compile   (when *.kt / *.kts staged)
-#   4. Android resource lint                (when res/ assets staged)
+#   4. Android lint                         (when *.kt / *.kts or res/ assets staged)
 #
 set -e
 
@@ -57,8 +57,9 @@ if printf '%s\n' "$STAGED" | grep -qE '\.(kt|kts)$'; then
   ./gradlew ktlintCheck detekt compileReleaseKotlin --daemon
 fi
 
-# --- 4. Android resource lint (only when res/ assets change) ---------------
-if printf '%s\n' "$STAGED" | grep -qE '/res/.*\.(xml|png|webp|jpg|jpeg)$'; then
-  echo "▶ pre-commit: ./gradlew :app:lintDebug (resource changes detected)"
-  ./gradlew :app:lintDebug --daemon
+# --- 4. Android lint (when Kotlin sources or res/ assets change) -----------
+# Covers code-level lint issues (Kotlin) and resource issues (layouts, drawables).
+if printf '%s\n' "$STAGED" | grep -qE '\.(kt|kts)$|/res/.*\.(xml|png|webp|jpg|jpeg)$'; then
+  echo "▶ pre-commit: ./gradlew lint"
+  ./gradlew lint --daemon
 fi
