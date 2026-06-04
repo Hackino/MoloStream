@@ -2,7 +2,9 @@ package com.molostream.feature.player.data
 
 import android.content.Context
 import android.net.Uri
+import androidx.annotation.OptIn
 import androidx.media3.common.AdViewProvider
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -62,6 +64,7 @@ class ExoPlayerController(
         override fun onEvents(player: Player, events: Player.Events) = syncState(player)
     }
 
+    @OptIn(UnstableApi::class)
     override fun initialize(adViewProvider: AdViewProvider) {
         if (player != null) {
             // View was re-created (e.g. Activity recreated after background) — re-attach
