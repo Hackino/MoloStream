@@ -23,6 +23,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.ui.PlayerView
 import com.molostream.core.designsystem.theme.MoloTheme
@@ -32,9 +35,17 @@ import com.molostream.feature.player.presentation.components.PlayerActions
 import com.molostream.feature.player.presentation.components.PlayerControls
 import com.molostream.feature.player.presentation.dialogs.ExitConfirmDialog
 import com.molostream.feature.player.presentation.dialogs.ResumePrompt
+import com.molostream.feature.player.presentation.dialogs.SeekUpsellDialog
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
+
+/** Groups the three event callbacks passed into [PlayerOverlay]. */
+private data class PlayerOverlayCallbacks(
+    val requestExit: () -> Unit,
+    val onToggleControls: () -> Unit,
+    val onSeekBlocked: () -> Unit,
+)
 
 /**
  * Player route. Renders the ExoPlayer surface (also the IMA ad container) with
@@ -52,19 +63,18 @@ fun PlayerScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var controlsVisible by remember { mutableStateOf(true) }
     var showExitConfirm by remember { mutableStateOf(false) }
+    var showSeekUpsell by remember { mutableStateOf(false) }
 
     val requestExit = { showExitConfirm = true }
 
     DisposableEffect(Unit) { onDispose { viewModel.release() } }
+    PlayerLifecycleObserver(viewModel)
     BackHandler(enabled = !showExitConfirm) { showExitConfirm = true }
 
     val promptVisible = state.resumePromptMs != null
     val shouldAutoHide = controlsVisible && state.isPlaying && !state.isPlayingAd && !promptVisible
     LaunchedEffect(shouldAutoHide) {
-        if (shouldAutoHide) {
-            delay(3200)
-            controlsVisible = false
-        }
+        if (shouldAutoHide) { delay(3200); controlsVisible = false }
     }
 
     Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
@@ -72,10 +82,14 @@ fun PlayerScreen(
         PlayerOverlay(
             args = args,
             state = state,
+            subscribed = subscribed,
             controlsVisible = controlsVisible,
-            requestExit = requestExit,
             viewModel = viewModel,
-            onToggleControls = { controlsVisible = !controlsVisible },
+            callbacks = PlayerOverlayCallbacks(
+                requestExit = requestExit,
+                onToggleControls = { controlsVisible = !controlsVisible },
+                onSeekBlocked = { showSeekUpsell = true },
+            ),
         )
         PlayerSpinner(state = state, controlsVisible = controlsVisible, promptVisible = promptVisible)
     }
@@ -96,6 +110,30 @@ fun PlayerScreen(
             onConfirm = onBack,
             onDismiss = { showExitConfirm = false },
         )
+    }
+
+    if (showSeekUpsell) {
+        SeekUpsellDialog(
+            onGoToPremium = { showSeekUpsell = false; requestExit() },
+            onDismiss = { showSeekUpsell = false },
+        )
+    }
+}
+
+/** Pauses playback when the app goes to background; resumes when it returns. */
+@Composable
+private fun PlayerLifecycleObserver(viewModel: PlayerViewModel) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> viewModel.pauseForBackground()
+                Lifecycle.Event.ON_RESUME -> viewModel.resumeFromBackground()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 }
 
@@ -119,16 +157,16 @@ private fun PlayerSurface(viewModel: PlayerViewModel) {
 private fun PlayerOverlay(
     args: PlayerArgs,
     state: PlayerUiState,
+    subscribed: Boolean,
     controlsVisible: Boolean,
-    requestExit: () -> Unit,
     viewModel: PlayerViewModel,
-    onToggleControls: () -> Unit,
+    callbacks: PlayerOverlayCallbacks,
 ) {
     val promptVisible = state.resumePromptMs != null
     if (!state.isPlayingAd && !promptVisible && !state.preparing) {
         Box(
             modifier = Modifier.fillMaxSize().pointerInput(Unit) {
-                detectTapGestures(onTap = { onToggleControls() })
+                detectTapGestures(onTap = { callbacks.onToggleControls() })
             },
         )
     }
@@ -142,17 +180,19 @@ private fun PlayerOverlay(
             title = args.title,
             subtitle = args.subtitle,
             state = state,
+            subscribed = subscribed,
             actions = PlayerActions(
-                onBack = requestExit,
+                onBack = callbacks.requestExit,
                 onTogglePlay = viewModel::togglePlayPause,
                 onSeekBy = viewModel::seekBy,
                 onSeekTo = viewModel::seekTo,
+                onSeekBlocked = callbacks.onSeekBlocked,
             ),
         )
     }
 
     if (state.isPlayingAd) {
-        AdOverlay(state = state, onBack = requestExit)
+        AdOverlay(state = state, onBack = callbacks.requestExit)
     }
 }
 

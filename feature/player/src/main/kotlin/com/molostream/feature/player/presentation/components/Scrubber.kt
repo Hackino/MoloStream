@@ -28,95 +28,122 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.molostream.core.designsystem.theme.MoloTheme
 import com.molostream.core.designsystem.R as DsR
 
 /**
- * Custom progress bar: a base track, a buffered track (so loading shows as the
- * bar filling rather than a spinner), the played track, and a draggable thumb.
- * Supports drag-to-scrub and tap-to-seek.
- *
- * For live (`isLive = true`) the buffered position is treated as the "live edge":
- * the user can only drag back within `[0, bufferedMs]`, and a red LIVE pill
- * replaces the total-duration affordance (tap it to jump back to the edge).
+ * Custom progress bar with drag-to-scrub, tap-to-seek, ad break dots, and live-edge pill.
+ * Pass [onSeekLocked] (non-null) to intercept gestures without changing position.
  */
 @Composable
 internal fun Scrubber(
-    positionMs: Long,
-    bufferedMs: Long,
-    durationMs: Long,
+    state: ScrubberState,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
-    isLive: Boolean = false,
+    onSeekLocked: (() -> Unit)? = null,
 ) {
-    val colors = MoloTheme.colors
-    // Live: the buffered position is the live edge; VOD: the full content duration.
-    val span = (if (isLive) bufferedMs else durationMs).coerceAtLeast(1L)
-    var dragFraction by remember { mutableStateOf<Float?>(null) }
-
-    val played = if (isLive) 1f else (dragFraction ?: (positionMs.toFloat() / span)).coerceIn(0f, 1f)
-    val buffered = if (isLive) 1f else (bufferedMs.toFloat() / span).coerceIn(0f, 1f)
-    val atLiveEdge = !isLive || positionMs >= bufferedMs - LIVE_EDGE_TOLERANCE_MS
-
-    // Live can never seek past what's loaded / past the live edge.
+    val atLiveEdge = !state.isLive || state.positionMs >= state.bufferedMs - LIVE_EDGE_TOLERANCE_MS
     val emitSeek: (Long) -> Unit = { target ->
-        onSeek(if (isLive) minOf(target, bufferedMs) else target)
+        onSeek(if (state.isLive) minOf(target, state.bufferedMs) else target)
     }
-
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        BoxWithConstraints(
-            modifier = Modifier
-                .weight(1f)
-                .height(28.dp)
-                .then(
-                    if (!isLive) Modifier
-                        .pointerInput(span) {
-                            detectHorizontalDragGestures(
-                                onDragStart = { offset -> dragFraction = (offset.x / size.width).coerceIn(0f, 1f) },
-                                onHorizontalDrag = { change, _ -> dragFraction = (change.position.x / size.width).coerceIn(0f, 1f) },
-                                onDragEnd = { dragFraction?.let { emitSeek((it * span).toLong()) }; dragFraction = null },
-                                onDragCancel = { dragFraction = null },
-                            )
-                        }
-                        .pointerInput(span) {
-                            detectTapGestures { offset -> emitSeek(((offset.x / size.width).coerceIn(0f, 1f) * span).toLong()) }
-                        }
-                    else Modifier
-                ),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            val trackHeight = 5.dp
-            // Base track
-            Box(Modifier.fillMaxWidth().height(trackHeight).clip(CircleShape).background(colors.text.copy(alpha = 0.22f)))
-            // Buffered
-            Box(Modifier.fillMaxWidth(buffered).height(trackHeight).clip(CircleShape).background(colors.text.copy(alpha = 0.4f)))
-            // Played
-            Box(
-                Modifier.fillMaxWidth(played).height(trackHeight).clip(CircleShape)
-                    .background(Brush.horizontalGradient(listOf(colors.accentHot, colors.accentSoft))),
-            )
-            // Thumb
-            Box(
-                Modifier
-                    .offset(x = (maxWidth - 14.dp) * played)
-                    .size(14.dp)
-                    .clip(CircleShape)
-                    .background(colors.accent),
-            )
-        }
-
-        if (isLive) {
-            LivePill(atLiveEdge = atLiveEdge, onGoLive = { onSeek(bufferedMs) })
+        ScrubberTrack(
+            state = state,
+            emitSeek = emitSeek,
+            onSeekLocked = onSeekLocked,
+            modifier = Modifier.weight(1f),
+        )
+        if (state.isLive) {
+            LivePill(atLiveEdge = atLiveEdge, onGoLive = { onSeek(state.bufferedMs) })
         }
     }
 }
 
-/** Red LIVE pill: solid at the live edge, dimmed (and tappable to go live) when seeked back. */
+@Composable
+private fun ScrubberTrack(
+    state: ScrubberState,
+    emitSeek: (Long) -> Unit,
+    onSeekLocked: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    val span = (if (state.isLive) state.bufferedMs else state.durationMs).coerceAtLeast(1L)
+    var dragFraction by remember { mutableStateOf<Float?>(null) }
+    val played = if (state.isLive) 1f else (dragFraction ?: (state.positionMs.toFloat() / span)).coerceIn(0f, 1f)
+    val buffered = if (state.isLive) 1f else (state.bufferedMs.toFloat() / span).coerceIn(0f, 1f)
+
+    BoxWithConstraints(
+        modifier = modifier.height(28.dp).then(
+            when {
+                state.isLive -> Modifier
+                onSeekLocked != null -> Modifier
+                    .pointerInput(onSeekLocked) {
+                        detectHorizontalDragGestures(
+                            onDragStart = { onSeekLocked() },
+                            onHorizontalDrag = { _, _ -> },
+                            onDragEnd = {},
+                            onDragCancel = {},
+                        )
+                    }
+                    .pointerInput(onSeekLocked) { detectTapGestures { onSeekLocked() } }
+                else -> Modifier
+                    .pointerInput(span) {
+                        detectHorizontalDragGestures(
+                            onDragStart = { offset -> dragFraction = (offset.x / size.width).coerceIn(0f, 1f) },
+                            onHorizontalDrag = { change, _ -> dragFraction = (change.position.x / size.width).coerceIn(0f, 1f) },
+                            onDragEnd = { dragFraction?.let { emitSeek((it * span).toLong()) }; dragFraction = null },
+                            onDragCancel = { dragFraction = null },
+                        )
+                    }
+                    .pointerInput(span) {
+                        detectTapGestures { offset -> emitSeek(((offset.x / size.width).coerceIn(0f, 1f) * span).toLong()) }
+                    }
+            },
+        ),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        ScrubberLayers(
+            played = played,
+            buffered = buffered,
+            adBreakFractions = if (!state.isLive) state.adBreakFractions else emptyList(),
+            maxWidth = maxWidth,
+        )
+    }
+}
+
+@Composable
+private fun ScrubberLayers(played: Float, buffered: Float, adBreakFractions: List<Float>, maxWidth: Dp) {
+    val colors = MoloTheme.colors
+    val trackHeight = 5.dp
+    Box(Modifier.fillMaxWidth().height(trackHeight).clip(CircleShape).background(colors.text.copy(alpha = 0.22f)))
+    Box(Modifier.fillMaxWidth(buffered).height(trackHeight).clip(CircleShape).background(colors.text.copy(alpha = 0.4f)))
+    Box(
+        Modifier.fillMaxWidth(played).height(trackHeight).clip(CircleShape)
+            .background(Brush.horizontalGradient(listOf(colors.accentHot, colors.accentSoft))),
+    )
+    adBreakFractions.forEach { fraction ->
+        Box(
+            Modifier
+                .offset(x = (maxWidth - AD_DOT_SIZE) * fraction)
+                .size(AD_DOT_SIZE)
+                .clip(CircleShape)
+                .background(colors.ad),
+        )
+    }
+    Box(
+        Modifier
+            .offset(x = (maxWidth - 14.dp) * played)
+            .size(14.dp)
+            .clip(CircleShape)
+            .background(colors.accent),
+    )
+}
+
 @Composable
 private fun LivePill(atLiveEdge: Boolean, onGoLive: () -> Unit) {
     val colors = MoloTheme.colors
@@ -133,3 +160,4 @@ private fun LivePill(atLiveEdge: Boolean, onGoLive: () -> Unit) {
 }
 
 private const val LIVE_EDGE_TOLERANCE_MS = 10_000L
+private val AD_DOT_SIZE = 8.dp

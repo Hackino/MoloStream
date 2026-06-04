@@ -27,4 +27,10 @@ data class PlayerUiState(
      * awaiting a Resume / Start-over choice (Netflix-style).
      */
     val resumePromptMs: Long? = null,
+    /**
+     * Fractions [0,1] of content duration where mid-roll ad breaks are scheduled.
+     * Pre-roll (0) and post-roll (1) are excluded — only mid-rolls get dots on the
+     * scrubber. Empty until IMA has parsed the VMAP and loaded the ad timeline.
+     */
+    val adBreakFractions: List<Float> = emptyList(),
 )

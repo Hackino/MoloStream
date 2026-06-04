@@ -6,4 +6,6 @@ internal data class PlayerActions(
     val onTogglePlay: () -> Unit,
     val onSeekBy: (Long) -> Unit,
     val onSeekTo: (Long) -> Unit,
+    /** Called instead of [onSeekTo] when the user is not subscribed. Null = seeking allowed. */
+    val onSeekBlocked: (() -> Unit)? = null,
 )
